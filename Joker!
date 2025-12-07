@@ -1,0 +1,97 @@
+!pip install yfinance pandas numpy matplotlib
+
+
+import numpy as np
+import pandas as pd
+import yfinance as yf
+
+tickers = ["TSLA","NVDA","META","AMD","PLTR","COIN","RIOT","MARA","HOLO","CYN","W","UPST","AFRM","RBLX","SOFI","DKNG","LCID","RIVN","NIO","XPEV","PDD","JD","BABA","IQ","TIGR","DOCU","DDOG","SNOW","NET","ZS","BYND","DASH","SHOP","WDAY","PATH","TOST","CLNE","FUBO","NKLA","BB","AGEN","UUUU","IMVT","NVAX","MRNA","GME","AMC",
+]
+yf.download(tickers)
+downloaded_data = yf.download(tickers)
+
+data = {}
+for ticker in tickers:
+    df_ticker = downloaded_data.loc[:, (slice(None), ticker)]
+    df_ticker.columns = df_ticker.columns.droplevel(1)
+    data[ticker] = df_tickerSS
+ 
+
+results = []
+buyPoint = 0
+
+for ticker in tickers:
+  df = data[ticker].reset_index().copy()
+
+  df['velocity'] = df['Close'].pct_change(5, fill_method=None)
+  df['acceleration'] = df['velocity'].diff(1)
+  df['shortMA'] = df['Close'].rolling(window=20).mean()
+  df['longMA'] = df['Close'].rolling(window=200).mean()
+
+
+  mean_V = df['velocity'].mean()
+  std_V = df['velocity'].std()
+
+  mean_A = df['acceleration'].mean()
+  std_A = df['acceleration'].std()
+
+  mean_LMA = df['longMA'].mean()
+  std_LMA = df['longMA'].std()
+
+  mean_SMA = df['shortMA'].mean()
+  std_SMA = df['shortMA'].std()
+
+
+  df['Az'] = (df['acceleration'] - mean_A) / std_A
+  df['Vz'] = (df['velocity'] - mean_V) / std_V
+  df['LMAz'] = (df['longMA'] - mean_LMA) / std_LMA
+  df['SMAz'] = (df['shortMA'] - mean_SMA) / std_SMA
+
+  currentV = df['Vz'].iloc[-1]
+  currentA = df['Az'].iloc[-1]
+  currentLMA = df['LMAz'].iloc[-1]
+  currentSMA = df['SMAz'].iloc[-1]
+
+
+  buyPoint = 0
+  if currentV > 0:
+    buyPoint +=1.5
+  elif currentV == 0:
+    buyPoint +=0
+  elif currentV < 0:
+    buyPoint -=1.5
+  else:
+    buyPoint +0
+
+  if currentA > 0:
+    buyPoint +=0.75
+  elif currentA == 0:
+    buyPoint +=0
+  elif currentA < 0:
+    buyPoint -=0.75
+  else:
+    buyPoint +0
+
+  if currentSMA > 0:
+    buyPoint += 1.5
+  elif currentSMA == 0:
+    buyPoint += 0
+  else:
+    buyPoint -=1.5
+
+  if currentLMA > 0: 
+    buyPoint += 1
+  elif currentLMA == 0:
+    buyPoint += 0
+  else:
+    buyPoint -=1
+
+  results.append((ticker, buyPoint))
+  results_sorted = sorted(results, key=lambda x: x[1], reverse=True)
+
+# print top 5
+print("TOP 5:")
+for ticker, buyPoint in results_sorted[:5]:
+  print(ticker, buyPoint)
+
+
