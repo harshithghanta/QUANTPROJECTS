@@ -1,0 +1,38 @@
+Joker Documentation 
+By Harshith Ghanta 
+12/7/2025
+
+Overview
+The model in front of you is called Joker. Joker is a quantitative finance model that operates on a few signals: velocity, acceleration, a short moving average (20d), and a long moving average (200d). These features all feed into a system that I created, buyPoints. The higher the buyPoint count, the better the stock is performing according to the filters I’ve assigned. 
+Signals
+The signals themselves aren’t very complex, but I found them indicative of key aspects of the finance sector. Velocity measures how fast the model is moving, and rewards stocks based on how quickly they are moving up or down. This is similar to volatility, but instead of using the entire stock’s history, I use the past couple of days and calculate the percentage change. Acceleration shows how quickly velocity changes, and this was another factor that tells me whether the stock's velocity is slowing down or accelerating. Long and Short Moving averages explain the changing behavior of a stock, and determine long or short-term troughs or peaks. All variables are standardized (using z-scores) to identify the top 25% of stocks that meet these criteria. These values were centered around 0, and the positive ones were rewarded, while the negative ones were punished. 
+
+
+
+
+
+
+Scoring Logic
+Velocity (Weight: +1.5 / –1.5)
+Acceleration (Weight: +0.75 / –0.75)
+Short-Term Moving Average — SMAz (Weight: +1.5 / –1.5)
+Long-Term Moving Average — LMAz (Weight: +1 / –1)
+
+Model Limitations/Problems
+This quant model has several limitations, including a lack of a dynamic scoring system and a limited number of variables. Although these variables demonstrate the basics of quant finance, they will not suffice and will be overshadowed by projects that have more variables. Another limitation of this model is that it lacks a sliding scale, so even a minute negative value can throw it off, as negative z-scores are unfairly penalized. To fix this, I adjusted my weights and penalized negative values less harshly. 
+Planned Enhancements / Future Versions
+As for this model, it is complete, and for the upcoming features I will add to the next model, Two-Face. 
+Greeks for Option Pricing (Delta, Gamma, Theta, Vega)
+Black-Scholes 
+Market Sentiment Signals
+Reddit (r/Wallstreetbets)
+Valuation Metrics
+EPS
+Gross Margin
+EBITDA
+Risk Measurement
+Beta
+Sortino Ratio
+Code
+
+
