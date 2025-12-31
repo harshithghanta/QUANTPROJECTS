@@ -1,0 +1,263 @@
+#This program creates an imaginary casino that is rigged against the player tremendously.
+#In doing so, I was able to learn how odds are formulated and how functions and if/else statements intersect to create the games we love
+#With this, there is also a "backtest" feature that works in tandem with the game and demonstrates how much money the player will lose
+#The odds shift ever so slightly depending on random factors and win streak
+#This was done to simulate "noise" from the market. The next few projects will translate these skills to the real market better. 
+
+
+
+import random
+money = random.randrange(10000,1000001, 10000)
+print("Welcome to the Casino!")
+print(f"You have walked in with {money} dollars")
+wincount = 0
+losscount = 0
+
+def play_round(money, i):
+    dice = [random.randint(1, 6+i) for _ in range(8+i)]
+    total = sum(dice)
+    halftotal = sum(dice[:4+i])
+
+    bet = 24                 # fixed guess
+    betamount = min(10000, money)
+
+    # baseline wager
+    if bet == total:
+        money += betamount * 3
+    else:
+        money -= betamount
+
+    return money
+
+
+def backtest(n_rounds, starting_money, i):
+    money = starting_money
+    history = []
+
+    for _ in range(n_rounds):
+        money = play_round(money, i)
+        history.append(money)
+
+        if money <= 0:
+            break
+
+    return history
+
+
+
+#regime definition
+regimedetector = random.randint(1, 6)
+
+if regimedetector in  [1,2,3,4]:
+  regime = "hostile"
+elif regimedetector == 5:
+  regime = "normal"
+else:
+  regime = "easy"
+
+if regime == "hostile":
+  i = 2
+elif regime == "normal":
+  i = 0
+elif regime == "easy":
+  i = -1
+
+
+
+print("There are a couple games to play:")
+
+while True:
+  dice = [random.randint(1,6+i) for _ in range(8)]
+  total = sum(dice)
+  quartertotal = sum(dice[:3+i])
+  halftotal = sum(dice[:4+i])
+  thirdquarterTotal = sum(dice[:6+i])
+  smallmanTotal = dice[0]
+
+
+
+  bet = int(input("Please start by entering a number between 8-48 "))
+  if bet < 8 or bet > 48:
+    print("Don't be a wisecrack. Play the game right.")
+    continue
+
+  print("How much do you want to bet?")
+  betamount = int(input("Enter a number up to your money "))
+  if betamount < 1 or betamount > money:
+    print("Don't be a wisecrack. Play the game right.")
+    continue
+
+
+  print("AHA! But there exists another option if you don't like a winning chance of 2.08%...")
+  print("Turn the tide for better odds, but it comes at a price...")
+  turnTheTide2 = 0
+  turnTheTide1 = (input("Do you want to turn the tide? (y/n) "))
+  used_tide = (turnTheTide1 == "y")
+
+  if used_tide:
+    while True:
+      turnTheTide2 = int(input("How much? "))
+
+      if turnTheTide2 > money:
+          print("Slow down there, cowboy! Can't cough up more than what you have!")
+      else:
+          break
+
+
+    money = money - turnTheTide2
+
+
+    if turnTheTide2 >= 0.5 * money:
+          betanother = input("What's the bet now big man? 'over' or 'under' 3? ")
+          if betanother == 'over':
+            if smallmanTotal >= 3:
+              money = turnTheTide2 * 2 + money
+              print("What a gamble! Looks like you turned the tide!")
+              wincount +=1
+            else:
+              money = money - turnTheTide2
+              print("Still lost with better odds? Can't possibly win the next one...")
+              losscount +=1
+          elif betanother == 'under':
+            if smallmanTotal < 3:
+              money = turnTheTide2 * 2 + money
+              print("What a gamble! Looks like you turned the tide!")
+              wincount +=1
+            else:
+              money = money - turnTheTide2
+              print("Still lost with better odds? Can't possibly win the next one...")
+              losscount +=1
+
+          else:
+            print("It appears that there is some error. Please retry ")
+
+    elif turnTheTide2 >= 0.25 * money:
+      betanother = input("What's the bet now big man? 'over' or 'under' 6? ")
+      if betanother == 'over':
+        if quartertotal >= 6:
+          money = turnTheTide2 * 2 + money
+          print("What a gamble! Looks like you turned the tide!")
+          wincount +=1
+        else:
+          money = money - turnTheTide2
+          print("Still lost with better odds? Can't possibly win the next one...")
+          losscount +=1
+      elif betanother == 'under':
+        if quartertotal < 6:
+          money = turnTheTide2 * 2 + money
+          print("What a gamble! Looks like you turned the tide!")
+          wincount +=1
+        else:
+          money = money - turnTheTide2
+          print("Still lost with better odds? Can't possibly win the next one...")
+          losscount +=1
+      else:
+        print("It appears that there is some error. Please retry ")
+
+
+    elif turnTheTide2 >= 0.1 * money:
+      betanother = input("What's the bet now big man? 'over' or 'under' 9? ")
+      if betanother == 'over':
+        if halftotal >= 9:
+          money = turnTheTide2 * 2 + money
+          print("What a gamble! Looks like you turned the tide!")
+          wincount +=1
+        else:
+          money = money - turnTheTide2
+          print("Still lost with better odds? Can't possibly win the next one...")
+          losscount +=1
+      elif betanother == 'under':
+        if halftotal < 9:
+          money = turnTheTide2 * 2 + money
+          print("What a gamble! Looks like you turned the tide!")
+          wincount +=1
+
+        else:
+          money = money - turnTheTide2
+          print("Still lost with better odds? Can't possibly win the next one...")
+          losscount +=1
+      else:
+        print("It appears that there is some error. Please retry ")
+
+
+    else:
+          betanother = input("What's the bet now big man? 'over' or 'under' 18? ")
+          if betanother == 'over':
+            if thirdquarterTotal >= 18:
+              money = turnTheTide2 * 2 + money
+              print("What a gamble! Looks like you turned the tide!")
+              wincount +=1
+            else:
+              money = money - turnTheTide2
+              print("Still lost with better odds? Can't possibly win the next one...")
+              losscount +=1
+          elif betanother == 'under':
+              if thirdquarterTotal < 18:
+                money = turnTheTide2 * 2 + money
+                print("What a gamble! Looks like you turned the tide!")
+                wincount +=1
+              else:
+                money = money - turnTheTide2
+                print("Still lost with better odds? Can't possibly win the next one...")
+                losscount +=1
+          else:
+            print("It appears that there is some error. Please retry ")
+
+  if not used_tide:
+    print("Suit yourself!")
+
+    if bet == total:
+      money = betamount * 3  + money
+      print("You degenerate! You win!")
+      print("Guess you didn't need my offer after all!")
+      wincount +=1
+
+    elif bet < total:
+      money = money - betamount
+      print("You bum! You lost!")
+      print("Maybe take my offer next time...")
+      losscount +=1
+
+    else:
+      money = money - betamount
+      print("You bum! You lost!")
+      print("Maybe take my offer next time...")
+      losscount +=1
+
+
+    if money <= 0:
+        print("You're broke. Game over.")
+        break
+    #print current stats
+    print(f"You currently have {money} left")
+    print(f"The winning bet was {total}")
+
+
+  replay = input("Play again? (y/n): ").lower()
+  if replay != "y":
+      print("Thank you for playing!")
+      break
+else:
+  print("Invalid game choice.")
+
+print(f"You have won {wincount} times")
+print(f"You have lost {losscount} times")
+print(f"You ended with {money}. Could have won more...")
+
+
+
+history = backtest(
+    n_rounds=100000,
+    starting_money=10000000,
+    i=3   # normal regime
+)
+
+ev = (history[-1] - 100000) / len(history)
+print("EV per round:", ev)
+print("Final money:", history[-1])
+print("Rounds survived:", len(history))
+
+
+
+
+
