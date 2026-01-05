@@ -1,0 +1,214 @@
+tickers = ["AAPL", "TSLA", "NVDA", "AMD", "META", "RBLX"]
+
+API_KEY = "PKTWRY3JYD34WN2NIAREDPBV4T"
+SECRET_KEY = "HYGDXaeRXhtjNynWfh7CznfHLMgf6wg9HJ6zvtBZzXoA"
+
+trading_client = TradingClient(
+    api_key=API_KEY,
+    secret_key=SECRET_KEY,
+    paper=True
+)
+
+#order filling function
+def marketOrder(symbol, qty, side, time_in_force):
+    order = MarketOrderRequest(
+      symbol=symbol,
+      qty=qty,
+      side=side,
+      time_in_force=time_in_force
+    )
+    try:
+        result = trading_client.submit_order(order)
+        print(f"ORDER SUBMITTED: {side} {qty} {symbol} | ID: {result.id}")
+        return result
+    except Exception as e:
+        print(f"Order failed for {symbol}: {e}")
+        return None
+
+equity_curve = []
+TRADING_ENABLED = True
+LIMIT = -0.03
+Allow_Shorts = False
+RSI_ENTRY = 55
+RSI_EXIT = 45
+STOP_LOSS = -0.03
+TAKE_PROF = 0.08
+Vol_Thresh = 0.004
+
+while True:
+  df = yf.download(tickers, interval = "1m", period = "2d")
+  #Price definitions
+  price = df["Close"].copy()
+  latest_price = price.iloc[-1]
+  avg_price = price.rolling(20).mean()
+
+  #positions & held
+  positions = trading_client.get_all_positions()
+
+  for p in positions:
+    fill_price = float(p.avg_entry_price)
+  held = {p.symbol: float(p.qty) for p in positions}
+
+
+  #Other variables
+  volume = df["Volume"]
+  vVelocity = volume.pct_change(5)
+  vAccel = vVelocity.diff()
+  delta = price.diff()
+  accel = delta.diff()
+  gains = delta.clip(lower = 0)
+  avg_gains = gains.rolling(20).mean()
+  losses = -delta.clip(upper = 0)
+  avg_losses = losses.rolling(20).mean()
+  avg_losses = avg_losses.replace(0, np.nan)
+
+
+  #Volatility Calculation
+  returns = np.log(price / price.shift(1))
+  volatility = returns.rolling(20).std()
+
+
+
+  #rsi calculations
+  rs = (avg_gains/avg_losses)
+  rsi = 100 - (100 / (1 + rs))
+  new_rsi = rsi.iloc[-1]
+
+  #cleanup logic
+  if new_rsi.max() - new_rsi.min() < 3:
+    print("No RSI spread — skipping")
+    time.sleep(60)
+    continue
+
+
+
+  #rsi calculations (MAX FOCUS)
+  best_rsi = new_rsi.max()
+  best_ticker = new_rsi.idxmax()
+
+
+  #rsi calculations (MIN FOCUS)
+  worst_rsi = new_rsi.min()
+  worst_ticker = new_rsi.idxmin()
+
+
+  #volatility calculations
+  volatility_new = volatility.iloc[-1]
+
+  #vol. (MAX FOCUS)
+  bestVol = volatility_new.max()
+  bestVol_ticker = volatility_new.idxmax()
+
+
+  #vol. (MIN FOCUS)
+  worstVol = volatility_new.min()
+  worstVol_ticker = volatility_new.idxmin()
+
+
+  #other variables
+  latest_price_worst = price.iloc[-1][worst_ticker]
+  latest_avg_worst = avg_price.iloc[-1][worst_ticker]
+
+  latest_price_best = price.iloc[-1][best_ticker]
+  latest_avg_best = avg_price.iloc[-1][best_ticker]
+
+  #maxdrawdown
+  equity = float(trading_client.get_account().equity)
+  equity_curve.append(equity)
+  equity_array = np.array(equity_curve)
+
+  peak = np.maximum.accumulate(equity_array)
+  drawdown = (equity_array - peak) / peak
+
+  max_drawdown = drawdown.min()
+
+
+  #filled_order logic to create accurate results
+  if order:
+      order_id = order.id
+      time.sleep(0.5)  # give it time to fill
+
+      filled_order = trading_client.get_order_by_id(order_id)
+
+      if filled_order.filled_avg_price:
+          exit_price = float(filled_order.filled_avg_price)
+
+
+  if max_drawdown < LIMIT and TRADING_ENABLED == True:
+    print("Max Drawdown Hit - LIQUIDATING POSITIONS")
+
+    for p in positions:
+      symbol = p.symbol
+      qty = float(p.qty)
+
+      if qty <= 0:
+        continue
+
+      side = OrderSide.SELL if float(p.qty) > 0 else OrderSide.BUY
+      marketOrder(p.symbol, qty, side, TimeInForce.DAY)
+
+
+      print(f"Flattened {p.symbol}")
+
+    TRADING_ENABLED = False
+
+  if not TRADING_ENABLED:
+    print("Trading Disabled")
+    time.sleep(30)
+    continue
+
+
+  #entry logic
+  if (
+      best_rsi > RSI_ENTRY and
+      best_ticker not in held
+  ):
+
+    order = marketOrder(best_ticker, 1, OrderSide.BUY, TimeInForce.DAY)
+
+
+  #exit logic
+  for p in positions:
+    symbol = p.symbol
+    qty = float(p.qty)
+
+    if qty <= 0:
+      continue
+    entry_price = float(p.avg_entry_price)
+    current_rsi = rsi.iloc[-1][symbol]
+    current_avg = avg_price.iloc[-1][symbol]
+
+    pnl_pct = (filled_order - entry_price) / entry_price
+    exit_reason = None
+
+
+    if pnl_pct <= STOP_LOSS:
+      exit_reason = "STOP LOSS"
+
+    elif current_rsi <= RSI_EXIT:
+      exit_reason = "LOW RSI"
+
+    elif pnl_pct >= TAKE_PROF:
+      exit_reason = "TAKE PROFIT"
+
+    elif fill_price < current_avg:
+      exit_reason = "FALLING MA"
+
+    if exit_reason:
+      order = marketOrder(symbol, int(qty), OrderSide.SELL, TimeInForce.DAY)
+      print(f"EXIT {symbol} | {exit_reason} | PNL: {pnl_pct.round(2)}% ")
+
+
+  print("Best RSI:", best_rsi, best_ticker)
+  print("Worst RSI:", worst_rsi, worst_ticker)
+  time.sleep(60)
+
+
+
+
+
+
+
+
+
+
